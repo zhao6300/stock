@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from fastapi.staticfiles import StaticFiles
 
 from a_stock_platform.auth import (
     create_access_token,
@@ -33,6 +34,7 @@ templates = Jinja2Templates(directory=Path("templates"))
 app = FastAPI(
     title="China A-Share Analysis Platform",
 )
+app.mount("/static", StaticFiles(directory=Path("static")), name="static")
 
 
 def _dashboard_response(
