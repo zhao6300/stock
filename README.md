@@ -25,6 +25,7 @@ make test
 - 基金净值数据：优先解析 Eastmoney 公共页面数据
 - 收益、年化收益率、年化波动率、最大回撤、夏普比率与均线
 - SQLite 数据层
+- 自选代码 CSV 上传导入
 - 受保护的 HTML 分析页和 JSON API
 
 ## Routes
@@ -50,5 +51,4 @@ REQUEST_TIMEOUT_SECONDS=10
 ## Known Limitations
 
 - 无外部数据源连接时，只使用 SQLite 中已导入的数据。
-- 目前未开放浏览器上传 CSV 的入口。
 - 本平台的分析结果不构成投资建议。
