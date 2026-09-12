@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
@@ -51,7 +51,9 @@ class Watchlist(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     symbol: Mapped[str] = mapped_column(String(20))
     symbol_type: Mapped[str] = mapped_column(String(10))
-    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
 
 
 class DailyPrice(Base):

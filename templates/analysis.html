@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>{{ title }}</h1>
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% else %}
+      <p class="muted">{{ symbol_type == 'stock' and 'A 股日线' or '基金净值' }} · {{ source }} · {{ start_date }} 至 {{ end_date }}</p>
+      <div class="chart">{{ sparkline | safe }}</div>
+      <dl class="metrics">
+        <div><dt>最新价 / 净值</dt><dd>{{ '%.4f'|format(latest) }}</dd></div>
+        <div><dt>区间收益率</dt><dd>{{ '%.2f%%'|format(total_return_pct) }}</dd></div>
+        <div><dt>年化收益率</dt><dd>{{ '%.2f%%'|format(annualized_return_pct) }}</dd></div>
+        <div><dt>年化波动率</dt><dd>{{ '%.2f%%'|format(annualized_volatility_pct) }}</dd></div>
+        <div><dt>最大回撤</dt><dd>{{ '%.2f%%'|format(max_drawdown_pct) }}</dd></div>
+        <div><dt>夏普比率</dt><dd>{% if sharpe is not none %}{{ '%.2f'|format(sharpe) }}{% else %}-{% endif %}</dd></div>
+        <div><dt>5 日均线</dt><dd>{{ '%.4f'|format(ma5) }}</dd></div>
+        <div><dt>20 日均线</dt><dd>{{ '%.4f'|format(ma20) }}</dd></div>
+        <div><dt>趋势</dt><dd>{{ trend == 'upward' and '向上' or '向下' }}</dd></div>
+      </dl>
+    {% endif %}
+  </section>
+{% endblock %}

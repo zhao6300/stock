@@ -3,6 +3,29 @@
 {% block content %}
   <section class="card">
     <h1>自选列表</h1>
-    <p>登录成功。自选列表与行情分析将在后续阶段接入。</p>
+    <h1>自选列表</h1>
+    <form class="watchlist-form" method="post" action="/dashboard/watchlist">
+      <label for="symbol">代码</label>
+      <input id="symbol" name="symbol" placeholder="600519 或 001594" required />
+      <select name="symbol_type" required>
+        <option value="stock">股票</option>
+        <option value="fund">基金</option>
+      </select>
+      <button type="submit">添加</button>
+    </form>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <ul class="symbols">
+      {% for entry in entries %}
+        <li>
+          <a href="/analysis/{{ entry.symbol_type }}/{{ entry.symbol }}">{{ entry.symbol }}</a>
+          <span>{{ '股票' if entry.symbol_type == 'stock' else '基金' }}</span>
+          <form method="post" action="/dashboard/watchlist/{{ entry.id }}/delete">
+            <button type="submit">删除</button>
+          </form>
+        </li>
+      {% else %}
+        <li class="empty">还没有自选代码。</li>
+      {% endfor %}
+    </ul>
   </section>
 {% endblock %}
