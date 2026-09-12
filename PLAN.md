@@ -35,3 +35,15 @@ Small independently verified phases.
 
 - Configuration, runtime commands, known limitations
 
+## Completed
+
+- phase-01 project skeleton
+- phase-02 authentication
+- phase-03 data layer
+- phase-04 indicators
+- phase-05 web and JSON interface
+- phase-06 documentation
+
+## Next phase
+
+- phase-07 CSV upload/import and expanded screening
