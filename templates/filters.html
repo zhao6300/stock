@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>保存筛选</h1>
+    <form method="post" action="/filters">
+      <label>名称</label>
+      <input type="text" name="name" required />
+      <label>代码</label>
+      <input type="text" name="symbols" required />
+      <select name="symbol_type">
+        <option value="stock">股票</option>
+        <option value="fund">基金</option>
+      </select>
+      <input type="number" name="min_annualized_return_pct" placeholder="最低年化收益率" min="0" />
+      <input type="number" name="max_annualized_volatility_pct" placeholder="最高年化波动率" min="0" />
+      <input type="number" name="min_sharpe" placeholder="最低夏普" />
+      <button type="submit">保存</button>
+    </form>
+  </section>
+  <section class="card">
+    {% if saved %}
+      <ul>
+        {% for item in saved %}
+          <li>
+            <a href="/compare?symbols={{ item.symbols }}&symbol_type={{ item.symbol_type }}">{{ item.name }}</a>
+            <form method="post" action="/filters/{{ item.id }}/delete">
+              <button type="submit">删除</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+{% endblock %}

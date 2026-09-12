@@ -45,6 +45,7 @@ Small independently verified phases.
 - phase-06 documentation
 - phase-07 CSV upload/import
 - phase-08 multi-asset comparison
+- phase-09 saved filters
 
 ## Next phase
 

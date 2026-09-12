@@ -20,7 +20,13 @@ from a_stock_platform.indicators import compute_metrics
 from a_stock_platform.importer import parse_csv_rows
 from a_stock_platform.models import Watchlist
 from a_stock_platform.config import settings
-from a_stock_platform.models import User, get_db, get_user_by_username, init_database
+from a_stock_platform.models import (
+    SavedFilter,
+    User,
+    get_db,
+    get_user_by_username,
+    init_database,
+)
 
 
 templates = Jinja2Templates(directory=Path("templates"))
@@ -490,3 +496,72 @@ def compare_json(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/filters")
+def filters_page(
+    request: Request,
+    user: Annotated[User | None, Depends(get_current_user)],
+    database: Annotated[Session, Depends(get_db)],
+) -> Response:
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    saved = database.execute(
+        select(SavedFilter).where(SavedFilter.user_id == user.id).order_by(SavedFilter.name)
+    ).scalars().all()
+    return templates.TemplateResponse(
+        request=request,
+        name="filters.html",
+        context={"title": "筛选", "user": user, "saved": saved},
+    )
+
+
+@app.post("/filters")
+def create_filter(
+    request: Request,
+    name: Annotated[str, Form()],
+    symbols: Annotated[str, Form()],
+    symbol_type: Annotated[str, Form()],
+    user: Annotated[User | None, Depends(get_current_user)],
+    database: Annotated[Session, Depends(get_db)],
+    min_annualized_return_pct: Annotated[float | None, Form()] = None,
+    max_annualized_volatility_pct: Annotated[float | None, Form()] = None,
+    min_sharpe: Annotated[float | None, Form()] = None,
+) -> Response:
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    name = name.strip()
+    if not name or len(name) > 50:
+        return _error_page(request, "filters.html", "筛选名称应为 1 到 50 个字符", 422)
+    try:
+        normalized_type = "stock" if symbol_type == "stock" else "fund"
+        validate_symbol(symbols.split(",")[0], normalized_type)
+    except ValueError as error:
+        return _error_page(request, "filters.html", str(error), 422)
+    saved = SavedFilter(
+        user_id=user.id,
+        name=name,
+        symbol_type=normalized_type,
+        symbols=symbols.strip(),
+        min_annualized_return_pct=min_annualized_return_pct,
+        max_annualized_volatility_pct=max_annualized_volatility_pct,
+        min_sharpe=min_sharpe,
+    )
+    database.add(saved)
+    database.commit()
+    return RedirectResponse("/filters", status_code=303)
+
+
+@app.post("/filters/{filter_id}/delete")
+def delete_filter(
+    filter_id: int,
+    user: Annotated[User | None, Depends(get_current_user)],
+    database: Annotated[Session, Depends(get_db)],
+) -> Response:
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    saved = database.get(SavedFilter, filter_id)
+    if saved and saved.user_id == user.id:
+        database.delete(saved)
+        database.commit()
+    return RedirectResponse("/filters", status_code=303)

@@ -13,6 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     select,
+    Float,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -72,6 +73,22 @@ class DailyPrice(Base):
     close_value: Mapped[float] = mapped_column(Numeric)
     volume: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     source: Mapped[str] = mapped_column(String(30))
+
+
+class SavedFilter(Base):
+    """A reusable comparison filter owned by a user."""
+
+    __tablename__ = "saved_filters"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(50))
+    symbol_type: Mapped[str] = mapped_column(String(10))
+    symbols: Mapped[str] = mapped_column(String(500))
+    min_annualized_return_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_annualized_volatility_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    min_sharpe: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 def get_engine(database_url: str | None = None):

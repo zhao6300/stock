@@ -27,6 +27,7 @@ make test
 - SQLite 数据层
 - 自选代码 CSV 上传导入
 - 多资产对比视图
+- 可保存筛选条件
 - 受保护的 HTML 分析页和 JSON API
 
 ## Routes
@@ -36,6 +37,7 @@ make test
 - `/dashboard`：自选列表
 - `/compare?symbols=600519,000001&symbol_type=stock`：多资产对比
 - `/compare?symbols=600519,000001&symbol_type=stock&min_annualized_return_pct=0`：带筛选的对比
+- `/filters`：保存过的筛选条件
 - `/analysis/{stock|fund}/{symbol}`：HTML 分析页
 - `/api/analysis/{stock|fund}/{symbol}`：JSON 分析结果
 - `/healthz`：健康检查
