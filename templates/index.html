@@ -1,14 +1,8 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ title }}</title>
-  </head>
-  <body>
-    <main class="card">
-      <h1>A 股与基金分析平台</h1>
-      <p>登录后查看自选列表、行情分析与净值分析。</p>
-    </main>
-  </body>
-</html>
+{% extends "base.html" %}
+{% block title %}A 股与基金分析平台{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>A 股与基金分析平台</h1>
+    <p>登录后查看自选列表、行情分析与净值分析。</p>
+  </section>
+{% endblock %}

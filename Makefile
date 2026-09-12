@@ -7,7 +7,7 @@ unit:
 	pytest -q tests/test_indicators.py tests/test_models.py
 
 integration:
-	pytest -q tests/test_api.py
+	pytest -q tests/test_api.py tests/test_auth.py
 
 test: unit integration
 

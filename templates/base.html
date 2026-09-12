@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}A 股与基金分析平台{% endblock %}</title>
+  </head>
+  <body>
+    <nav>
+      <a href="/">首页</a>
+      {% if user %}
+        <a href="/dashboard">自选</a>
+        <a href="/logout">退出</a>
+      {% else %}
+        <a href="/login">登录</a>
+        <a href="/register">注册</a>
+      {% endif %}
+    </nav>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
