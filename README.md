@@ -35,6 +35,7 @@ make test
 - `/login`：登录
 - `/dashboard`：自选列表
 - `/compare?symbols=600519,000001&symbol_type=stock`：多资产对比
+- `/compare?symbols=600519,000001&symbol_type=stock&min_annualized_return_pct=0`：带筛选的对比
 - `/analysis/{stock|fund}/{symbol}`：HTML 分析页
 - `/api/analysis/{stock|fund}/{symbol}`：JSON 分析结果
 - `/healthz`：健康检查

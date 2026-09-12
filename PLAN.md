@@ -48,4 +48,4 @@ Small independently verified phases.
 
 ## Next phase
 
-- phase-09 expanded screening
+- phase-09 additional screening criteria and saved filters

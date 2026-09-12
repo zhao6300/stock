@@ -90,6 +90,20 @@ def test_compare_json(client):
     assert all("metrics" in row for row in payload["rows"])
 
 
+def test_compare_screened_json(client):
+    response = client.get(
+        "/api/compare",
+        params={
+            "symbols": "600519.SH,000001.SZ",
+            "symbol_type": "stock",
+            "days": 5,
+            "min_annualized_return_pct": 1000,
+        },
+    )
+    assert response.status_code == 200
+    assert [row["symbol"] for row in response.json()["rows"]] == ["000001"]
+
+
 def test_compare_page(client):
     response = client.get(
         "/compare",

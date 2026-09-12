@@ -10,6 +10,9 @@
         <option value="stock" {% if symbol_type == 'stock' %}selected{% endif %}>股票</option>
         <option value="fund" {% if symbol_type == 'fund' %}selected{% endif %}>基金</option>
       </select>
+      <input type="number" name="min_annualized_return_pct" placeholder="最低年化收益率" value="{{ min_annualized_return_pct or '' }}" min="0" />
+      <input type="number" name="max_annualized_volatility_pct" placeholder="最高年化波动率" value="{{ max_annualized_volatility_pct or '' }}" min="0" />
+      <input type="number" name="min_sharpe" placeholder="最低夏普" value="{{ min_sharpe or '' }}" />
       <button type="submit">对比</button>
     </form>
   </section>

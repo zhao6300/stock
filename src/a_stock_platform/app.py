@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
+import math
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -326,6 +327,9 @@ def _comparison_payload(
     days: int,
     sort_by: str = "annualized_return_pct",
     direction: str = "desc",
+    min_annualized_return_pct: float | None = None,
+    max_annualized_volatility_pct: float | None = None,
+    min_sharpe: float | None = None,
 ) -> dict[str, object]:
     if symbol_type not in {"stock", "fund"}:
         raise ValueError("symbol_type 只能是 stock 或 fund")
@@ -357,6 +361,18 @@ def _comparison_payload(
         )
     if sort_by != "annualized_return_pct":
         raise ValueError("排序字段无效")
+    if min_annualized_return_pct is not None:
+        rows = [
+            row for row in rows
+            if float(row["metrics"].get("annualized_return_pct", 0.0)) >= min_annualized_return_pct
+        ]
+    if max_annualized_volatility_pct is not None:
+        rows = [
+            row for row in rows
+            if float(row["metrics"].get("annualized_volatility_pct", math.inf)) <= max_annualized_volatility_pct
+        ]
+    if min_sharpe is not None:
+        rows = [row for row in rows if row["metrics"].get("sharpe") is not None and float(row["metrics"]["sharpe"]) >= min_sharpe]
     rows.sort(
         key=lambda item: float(item["metrics"].get(sort_by, 0.0) or 0.0),
         reverse=direction == "desc",
@@ -421,11 +437,24 @@ def compare_page(
     days: Annotated[int, Query(ge=5, le=500)] = 250,
     sort_by: str = "annualized_return_pct",
     direction: str = "desc",
+    min_annualized_return_pct: Annotated[float | None, Query(ge=0)] = None,
+    max_annualized_volatility_pct: Annotated[float | None, Query(ge=0)] = None,
+    min_sharpe: float | None = None,
 ) -> Response:
     if user is None:
         return RedirectResponse("/login", status_code=303)
     try:
-        payload = _comparison_payload(symbols, symbol_type, database, days, sort_by, direction)
+        payload = _comparison_payload(
+            symbols,
+            symbol_type,
+            database,
+            days,
+            sort_by,
+            direction,
+            min_annualized_return_pct=min_annualized_return_pct,
+            max_annualized_volatility_pct=max_annualized_volatility_pct,
+            min_sharpe=min_sharpe,
+        )
     except ValueError as error:
         return _error_page(request, "compare.html", str(error), 422)
     return templates.TemplateResponse(
@@ -443,8 +472,21 @@ def compare_json(
     days: Annotated[int, Query(ge=5, le=500)] = 250,
     sort_by: str = "annualized_return_pct",
     direction: str = "desc",
+    min_annualized_return_pct: Annotated[float | None, Query(ge=0)] = None,
+    max_annualized_volatility_pct: Annotated[float | None, Query(ge=0)] = None,
+    min_sharpe: float | None = None,
 ) -> dict[str, object]:
     try:
-        return _comparison_payload(symbols, symbol_type, database, days, sort_by, direction)
+        return _comparison_payload(
+            symbols,
+            symbol_type,
+            database,
+            days,
+            sort_by,
+            direction,
+            min_annualized_return_pct=min_annualized_return_pct,
+            max_annualized_volatility_pct=max_annualized_volatility_pct,
+            min_sharpe=min_sharpe,
+        )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
