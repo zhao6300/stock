@@ -43,7 +43,7 @@ Small independently verified phases.
 - phase-04 indicators
 - phase-05 web and JSON interface
 - phase-06 documentation
-- phase-07 CSV upload/import and expanded screening
+- phase-07 CSV upload/import
 
 ## Next phase
 
