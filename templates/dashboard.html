@@ -19,6 +19,13 @@
         <li>
           <a href="/analysis/{{ entry.symbol_type }}/{{ entry.symbol }}">{{ entry.symbol }}</a>
           <span>{{ '股票' if entry.symbol_type == 'stock' else '基金' }}</span>
+          <form class="import-form" method="post" action="/dashboard/watchlist/{{ entry.id }}/import" enctype="multipart/form-data">
+            <label>
+              导入 CSV
+              <input type="file" name="csv_file" accept=".csv,text/csv" required />
+            </label>
+            <button type="submit">导入</button>
+          </form>
           <form method="post" action="/dashboard/watchlist/{{ entry.id }}/delete">
             <button type="submit">删除</button>
           </form>

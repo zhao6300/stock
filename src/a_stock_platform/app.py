@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -14,8 +14,9 @@ from a_stock_platform.auth import (
     read_access_token,
     verify_password,
 )
-from a_stock_platform.data import get_market_history, validate_symbol
+from a_stock_platform.data import get_market_history, import_daily_prices, validate_symbol
 from a_stock_platform.indicators import compute_metrics
+from a_stock_platform.importer import parse_csv_rows
 from a_stock_platform.models import Watchlist
 from a_stock_platform.config import settings
 from a_stock_platform.models import User, get_db, get_user_by_username, init_database
@@ -25,6 +26,24 @@ templates = Jinja2Templates(directory=Path("templates"))
 app = FastAPI(
     title="China A-Share Analysis Platform",
 )
+
+
+def _dashboard_response(
+    request: Request,
+    user: User,
+    database: Session,
+    error: str | None = None,
+    error_status: int = 200,
+) -> Response:
+    entries = database.execute(
+        select(Watchlist).where(Watchlist.user_id == user.id).order_by(Watchlist.symbol)
+    ).scalars().all()
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={"title": "自选", "user": user, "entries": entries, "error": error},
+        status_code=error_status if error else 200,
+    )
 
 
 def _sparkline(candles: list[dict[str, object]], width: int = 240, height: int = 60) -> str:
@@ -216,7 +235,7 @@ def add_watchlist_symbol(
     try:
         normalized = validate_symbol(symbol, symbol_type)
     except ValueError as error:
-        return _error_page(request, "dashboard.html", str(error), 422)
+        return _dashboard_response(request, user, database, str(error), 422)
     existing = database.execute(
         select(Watchlist).where(
             Watchlist.user_id == user.id,
@@ -249,6 +268,32 @@ def delete_watchlist_symbol(
     if entry and entry.user_id == user.id:
         database.delete(entry)
         database.commit()
+    return RedirectResponse("/dashboard", status_code=303)
+
+
+@app.post("/dashboard/watchlist/{watchlist_id}/import")
+async def import_watchlist_csv(
+    request: Request,
+    watchlist_id: int,
+    csv_file: Annotated[UploadFile, File()],
+    user: Annotated[User | None, Depends(get_current_user)],
+    database: Annotated[Session, Depends(get_db)],
+) -> Response:
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    entry = database.get(Watchlist, watchlist_id)
+    if entry is None or entry.user_id != user.id:
+        return _dashboard_response(request, user, database, "自选代码不存在", 404)
+    try:
+        rows = parse_csv_rows(await csv_file.read())
+    except ValueError as error:
+        return _dashboard_response(request, user, database, str(error), 422)
+    try:
+        imported = import_daily_prices(database, entry.symbol, entry.symbol_type, rows, source="csv_upload")
+    except ValueError as error:
+        return _dashboard_response(request, user, database, str(error), 422)
+    if not imported:
+        return _dashboard_response(request, user, database, "没有导入任何记录")
     return RedirectResponse("/dashboard", status_code=303)
 
 
