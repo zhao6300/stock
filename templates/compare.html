@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h1>多资产对比</h1>
+    <form method="get" action="/compare">
+      <label>代码</label>
+      <input type="text" name="symbols" value="{{ symbols|join(',') }}" required />
+      <select name="symbol_type">
+        <option value="stock" {% if symbol_type == 'stock' %}selected{% endif %}>股票</option>
+        <option value="fund" {% if symbol_type == 'fund' %}selected{% endif %}>基金</option>
+      </select>
+      <button type="submit">对比</button>
+    </form>
+  </section>
+  <section class="card">
+    {% if warnings %}
+    <ul class="warnings">
+      {% for warning in warnings %}
+      <li>{{ warning }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if rows %}
+      <table>
+        <thead>
+          <tr>
+            <th>代码</th>
+            <th>最新价 / 净值</th>
+            <th>年化收益率</th>
+            <th>年化波动率</th>
+            <th>最大回撤</th>
+            <th>趋势</th>
+            <th>走势</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td><a href="/analysis/{{ row.symbol_type }}/{{ row.symbol }}">{{ row.symbol }}</a></td>
+            <td>{{ '%.4f'|format(row.metrics.latest if row.metrics.latest else 0) }}</td>
+            <td>{{ '%.2f%%'|format(row.metrics.annualized_return_pct if row.metrics.annualized_return_pct else 0) }}</td>
+            <td>{{ '%.2f%%'|format(row.metrics.annualized_volatility_pct if row.metrics.annualized_volatility_pct else 0) }}</td>
+            <td>{{ '%.2f%%'|format(row.metrics.max_drawdown_pct if row.metrics.max_drawdown_pct else 0) }}</td>
+            <td>{{ '上行' if row.metrics.trend == 'upward' else '下行' }}</td>
+            <td>{{ row.sparkline|safe }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </section>
+{% endblock %}

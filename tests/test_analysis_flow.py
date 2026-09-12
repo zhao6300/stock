@@ -15,6 +15,14 @@ ROWS = [
     {"trade_date": "2024-01-08", "close": 103.0},
 ]
 
+SECOND_ROWS = [
+    {"trade_date": "2024-01-02", "close": 50.0},
+    {"trade_date": "2024-01-03", "close": 52.0},
+    {"trade_date": "2024-01-04", "close": 51.0},
+    {"trade_date": "2024-01-05", "close": 55.0},
+    {"trade_date": "2024-01-08", "close": 58.0},
+]
+
 
 @pytest.fixture()
 def client(tmp_path):
@@ -23,6 +31,7 @@ def client(tmp_path):
     engine = get_engine(database_url)
     database = sessionmaker(bind=engine)()
     import_daily_prices(database, "600519.SH", "stock", ROWS)
+    import_daily_prices(database, "000001.SZ", "stock", SECOND_ROWS)
     database.close()
 
     def override_get_db():
@@ -68,3 +77,25 @@ def test_dashboard_watchlist(client):
     dashboard = client.get("/dashboard")
     assert dashboard.status_code == 200
     assert "600519" in dashboard.text
+
+
+def test_compare_json(client):
+    response = client.get(
+        "/api/compare",
+        params={"symbols": "600519.SH,000001.SZ", "symbol_type": "stock", "days": 5},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert [row["symbol"] for row in payload["rows"]] == ["000001", "600519"]
+    assert all("metrics" in row for row in payload["rows"])
+
+
+def test_compare_page(client):
+    response = client.get(
+        "/compare",
+        params={"symbols": "600519.SH,000001.SZ", "symbol_type": "stock", "days": 5},
+    )
+    assert response.status_code == 200
+    assert "多资产对比" in response.text
+    assert "600519" in response.text
+    assert "000001" in response.text

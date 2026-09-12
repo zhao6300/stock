@@ -319,6 +319,58 @@ def _analysis_data(
     }
 
 
+def _comparison_payload(
+    symbols: str | list[str],
+    symbol_type: str,
+    database: Session,
+    days: int,
+    sort_by: str = "annualized_return_pct",
+    direction: str = "desc",
+) -> dict[str, object]:
+    if symbol_type not in {"stock", "fund"}:
+        raise ValueError("symbol_type 只能是 stock 或 fund")
+    if direction not in {"asc", "desc"}:
+        raise ValueError("direction 只能是 asc 或 desc")
+    if not isinstance(symbols, str):
+        symbols = ",".join(symbols)
+    requested = [item.strip() for item in symbols.replace("，", ",").split(",") if item.strip()]
+    if not requested:
+        raise ValueError("至少提供一个股票或基金代码")
+    if len(requested) > 30:
+        raise ValueError("一次最多比较 30 个代码")
+    rows = []
+    warnings = []
+    for symbol in requested:
+        try:
+            result = _analysis_data(symbol, symbol_type, database, days)
+        except ValueError as error:
+            warnings.append(f"{symbol}: {error}")
+            continue
+        rows.append(
+            {
+                "symbol": result["symbol"],
+                "symbol_type": result["symbol_type"],
+                "metrics": result["metrics"],
+                "source": result["source"],
+                "sparkline": result["sparkline"],
+            }
+        )
+    if sort_by != "annualized_return_pct":
+        raise ValueError("排序字段无效")
+    rows.sort(
+        key=lambda item: float(item["metrics"].get(sort_by, 0.0) or 0.0),
+        reverse=direction == "desc",
+    )
+    return {
+        "symbol_type": symbol_type,
+        "symbols": requested,
+        "rows": rows,
+        "warnings": warnings,
+        "sort_by": sort_by,
+        "direction": direction,
+    }
+
+
 @app.get("/analysis/{symbol_type}/{symbol}")
 def analysis_page(
     request: Request,
@@ -355,5 +407,44 @@ def analysis_json(
 ) -> dict[str, object]:
     try:
         return _analysis_data(symbol, symbol_type, database, days)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/compare")
+def compare_page(
+    request: Request,
+    symbols: str,
+    symbol_type: str,
+    database: Annotated[Session, Depends(get_db)],
+    user: Annotated[User | None, Depends(get_current_user)] = None,
+    days: Annotated[int, Query(ge=5, le=500)] = 250,
+    sort_by: str = "annualized_return_pct",
+    direction: str = "desc",
+) -> Response:
+    if user is None:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        payload = _comparison_payload(symbols, symbol_type, database, days, sort_by, direction)
+    except ValueError as error:
+        return _error_page(request, "compare.html", str(error), 422)
+    return templates.TemplateResponse(
+        request=request,
+        name="compare.html",
+        context={"title": "对比", "user": user, **payload},
+    )
+
+
+@app.get("/api/compare")
+def compare_json(
+    symbols: str,
+    symbol_type: str,
+    database: Annotated[Session, Depends(get_db)],
+    days: Annotated[int, Query(ge=5, le=500)] = 250,
+    sort_by: str = "annualized_return_pct",
+    direction: str = "desc",
+) -> dict[str, object]:
+    try:
+        return _comparison_payload(symbols, symbol_type, database, days, sort_by, direction)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

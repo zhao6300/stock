@@ -44,7 +44,8 @@ Small independently verified phases.
 - phase-05 web and JSON interface
 - phase-06 documentation
 - phase-07 CSV upload/import
+- phase-08 multi-asset comparison
 
 ## Next phase
 
-- phase-08 multi-asset comparison and expanded screening
+- phase-09 expanded screening
