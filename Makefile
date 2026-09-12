@@ -4,7 +4,7 @@ install:
 	python -m pip install -r requirements.txt
 
 unit:
-	pytest -q tests/test_indicators.py tests/test_models.py
+	pytest -q tests/test_indicators.py tests/test_models.py tests/test_data.py
 
 integration:
 	pytest -q tests/test_api.py tests/test_auth.py
