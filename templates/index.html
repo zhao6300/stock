@@ -1,8 +1,27 @@
 {% extends "base.html" %}
 {% block title %}A 股与基金分析平台{% endblock %}
 {% block content %}
-  <section class="card">
-    <h1>A 股与基金分析平台</h1>
-    <p>登录后查看自选列表、行情分析与净值分析。</p>
+  <section class="hero card">
+    <span class="eyebrow">本地数据分析</span>
+    <h1>把 A 股与基金放进同一个分析工作台</h1>
+    <p>登录后管理自选、导入日线或净值数据，并查看收益、风险、回撤和趋势摘要。</p>
+    <div class="hero-actions">
+      <a class="button" href="/login">开始分析</a>
+      <a class="ghost" href="/register">创建账户</a>
+    </div>
+  </section>
+  <section class="feature-grid">
+    <article class="feature-card">
+      <h2>自选追踪</h2>
+      <p>股票和基金分组管理，点击即可进入趋势详情。</p>
+    </article>
+    <article class="feature-card">
+      <h2>风险摘要</h2>
+      <p>收益率、波动率、最大回撤与夏普指标集中展示。</p>
+    </article>
+    <article class="feature-card">
+      <h2>多资产对比</h2>
+      <p>一次最多对比 30 个代码，支持排序与条件筛选。</p>
+    </article>
   </section>
 {% endblock %}

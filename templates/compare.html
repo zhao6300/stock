@@ -13,6 +13,9 @@
       <input type="number" name="min_annualized_return_pct" placeholder="最低年化收益率" value="{{ min_annualized_return_pct or '' }}" min="0" />
       <input type="number" name="max_annualized_volatility_pct" placeholder="最高年化波动率" value="{{ max_annualized_volatility_pct or '' }}" min="0" />
       <input type="number" name="min_sharpe" placeholder="最低夏普" value="{{ min_sharpe or '' }}" />
+      <input type="hidden" name="days" value="{{ days }}" />
+      <input type="hidden" name="sort_by" value="{{ sort_by }}" />
+      <input type="hidden" name="direction" value="{{ direction }}" />
       <button type="submit">对比</button>
     </form>
   </section>
@@ -42,10 +45,10 @@
           <tr>
             <td><a href="/analysis/{{ row.symbol_type }}/{{ row.symbol }}">{{ row.symbol }}</a></td>
             <td>{{ '%.4f'|format(row.metrics.latest if row.metrics.latest else 0) }}</td>
-            <td>{{ '%.2f%%'|format(row.metrics.annualized_return_pct if row.metrics.annualized_return_pct else 0) }}</td>
+            <td class="{{ 'metric-positive' if row.metrics.annualized_return_pct >= 0 else 'metric-negative' }}">{{ '%.2f%%'|format(row.metrics.annualized_return_pct if row.metrics.annualized_return_pct else 0) }}</td>
             <td>{{ '%.2f%%'|format(row.metrics.annualized_volatility_pct if row.metrics.annualized_volatility_pct else 0) }}</td>
             <td>{{ '%.2f%%'|format(row.metrics.max_drawdown_pct if row.metrics.max_drawdown_pct else 0) }}</td>
-            <td>{{ '上行' if row.metrics.trend == 'upward' else '下行' }}</td>
+            <td class="{{ 'metric-positive' if row.metrics.trend == 'upward' else 'metric-negative' }}">{{ '上行' if row.metrics.trend == 'upward' else '下行' }}</td>
             <td>{{ row.sparkline|safe }}</td>
           </tr>
           {% endfor %}

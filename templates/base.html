@@ -7,17 +7,24 @@
     <link rel="stylesheet" href="/static/base.css" />
   </head>
   <body>
+    {% set current_path = request.url.path %}
     <nav>
-      <a href="/">首页</a>
+      <div class="brand">
+        <span class="brand-mark">A</span>
+        <span>A股基金分析台</span>
+      </div>
+      <div class="nav-actions">
+        <a class="nav-link" href="/">首页</a>
       {% if user %}
-        <a href="/dashboard">自选</a>
-        <a href="/filters">筛选</a>
-        <a href="/compare?symbols=600519,000001&symbol_type=stock">对比</a>
-        <a href="/analysis/stock/600519">示例分析</a>
-        <a href="/logout">退出</a>
+        <a class="nav-link {{ 'active' if current_path == '/dashboard' }}" href="/dashboard">自选</a>
+        <a class="nav-link" href="/filters">筛选</a>
+        <a class="nav-link {{ 'active' if current_path == '/compare' }}" href="/compare?symbols=600519,000001&symbol_type=stock">对比</a>
+        <a class="nav-link {{ 'active' if current_path.startswith('/analysis') }}" href="/analysis/stock/600519">示例分析</a>
+        <a class="nav-link danger" href="/logout">退出</a>
       {% else %}
-        <a href="/login">登录</a>
-        <a href="/register">注册</a>
+        <a class="nav-link" href="/login">登录</a>
+        <a class="nav-link {{ 'active' if current_path == '/register' }}" href="/register">注册</a>
+      </div>
       {% endif %}
     </nav>
     <main>
