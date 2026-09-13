@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
-import math
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -16,8 +15,8 @@ from a_stock_platform.auth import (
     read_access_token,
     verify_password,
 )
-from a_stock_platform.data import get_market_history, import_daily_prices, validate_symbol
-from a_stock_platform.indicators import compute_metrics
+from a_stock_platform.analysis import ComparisonFilter, build_analysis_data, build_comparison_data
+from a_stock_platform.data import import_daily_prices, validate_symbol
 from a_stock_platform.importer import parse_csv_rows
 from a_stock_platform.models import Watchlist
 from a_stock_platform.config import settings
@@ -53,20 +52,6 @@ def _dashboard_response(
         context={"title": "自选", "user": user, "entries": entries, "error": error},
         status_code=error_status if error else 200,
     )
-
-
-def _sparkline(candles: list[dict[str, object]], width: int = 240, height: int = 60) -> str:
-    closes = [float(row["close"]) for row in candles]
-    if len(closes) < 2:
-        return ""
-    low, high = min(closes), max(closes)
-    denominator = high - low or 1
-    points = []
-    for index, close in enumerate(closes):
-        x = (index / (len(closes) - 1)) * width
-        y = height - ((close - low) / denominator) * height
-        points.append(f"{x:.1f},{y:.1f}")
-    return f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="价格走势"><polyline fill="none" stroke="#2563eb" stroke-width="2" points="{" ".join(points)}" /></svg>'
 
 
 @asynccontextmanager
@@ -306,95 +291,6 @@ async def import_watchlist_csv(
     return RedirectResponse("/dashboard", status_code=303)
 
 
-def _analysis_data(
-    symbol: str,
-    symbol_type: str,
-    database: Session,
-    days: int,
-) -> dict[str, object]:
-    normalized = validate_symbol(symbol, symbol_type)
-    candles = get_market_history(database, normalized, symbol_type, min(max(days, 5), 500))
-    if not candles:
-        raise ValueError("暂无行情数据，请确认接口可用或导入数据")
-    metrics = compute_metrics(candles)
-    source = str(candles[-1].get("source") or "")
-    return {
-        "symbol": normalized,
-        "symbol_type": symbol_type,
-        "candles": candles,
-        "metrics": metrics,
-        "source": source,
-        "sparkline": _sparkline(candles),
-    }
-
-
-def _comparison_payload(
-    symbols: str | list[str],
-    symbol_type: str,
-    database: Session,
-    days: int,
-    sort_by: str = "annualized_return_pct",
-    direction: str = "desc",
-    min_annualized_return_pct: float | None = None,
-    max_annualized_volatility_pct: float | None = None,
-    min_sharpe: float | None = None,
-) -> dict[str, object]:
-    if symbol_type not in {"stock", "fund"}:
-        raise ValueError("symbol_type 只能是 stock 或 fund")
-    if direction not in {"asc", "desc"}:
-        raise ValueError("direction 只能是 asc 或 desc")
-    if not isinstance(symbols, str):
-        symbols = ",".join(symbols)
-    requested = [item.strip() for item in symbols.replace("，", ",").split(",") if item.strip()]
-    if not requested:
-        raise ValueError("至少提供一个股票或基金代码")
-    if len(requested) > 30:
-        raise ValueError("一次最多比较 30 个代码")
-    rows = []
-    warnings = []
-    for symbol in requested:
-        try:
-            result = _analysis_data(symbol, symbol_type, database, days)
-        except ValueError as error:
-            warnings.append(f"{symbol}: {error}")
-            continue
-        rows.append(
-            {
-                "symbol": result["symbol"],
-                "symbol_type": result["symbol_type"],
-                "metrics": result["metrics"],
-                "source": result["source"],
-                "sparkline": result["sparkline"],
-            }
-        )
-    if sort_by != "annualized_return_pct":
-        raise ValueError("排序字段无效")
-    if min_annualized_return_pct is not None:
-        rows = [
-            row for row in rows
-            if float(row["metrics"].get("annualized_return_pct", 0.0)) >= min_annualized_return_pct
-        ]
-    if max_annualized_volatility_pct is not None:
-        rows = [
-            row for row in rows
-            if float(row["metrics"].get("annualized_volatility_pct", math.inf)) <= max_annualized_volatility_pct
-        ]
-    if min_sharpe is not None:
-        rows = [row for row in rows if row["metrics"].get("sharpe") is not None and float(row["metrics"]["sharpe"]) >= min_sharpe]
-    rows.sort(
-        key=lambda item: float(item["metrics"].get(sort_by, 0.0) or 0.0),
-        reverse=direction == "desc",
-    )
-    return {
-        "symbol_type": symbol_type,
-        "symbols": requested,
-        "rows": rows,
-        "warnings": warnings,
-        "sort_by": sort_by,
-        "direction": direction,
-    }
-
-
 @app.get("/analysis/{symbol_type}/{symbol}")
 def analysis_page(
     request: Request,
@@ -407,7 +303,7 @@ def analysis_page(
     if user is None:
         return RedirectResponse("/login", status_code=303)
     try:
-        data = _analysis_data(symbol, symbol_type, database, days)
+        data = build_analysis_data(database, symbol, symbol_type, days)
     except ValueError as error:
         return _error_page(request, "analysis.html", str(error), 422)
     return templates.TemplateResponse(
@@ -430,7 +326,7 @@ def analysis_json(
     days: Annotated[int, Query(ge=5, le=500)] = 250,
 ) -> dict[str, object]:
     try:
-        return _analysis_data(symbol, symbol_type, database, days)
+        return build_analysis_data(database, symbol, symbol_type, days)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -452,16 +348,18 @@ def compare_page(
     if user is None:
         return RedirectResponse("/login", status_code=303)
     try:
-        payload = _comparison_payload(
+        payload = build_comparison_data(
+            database,
             symbols,
             symbol_type,
-            database,
             days,
             sort_by,
             direction,
-            min_annualized_return_pct=min_annualized_return_pct,
-            max_annualized_volatility_pct=max_annualized_volatility_pct,
-            min_sharpe=min_sharpe,
+            ComparisonFilter(
+                min_annualized_return_pct=min_annualized_return_pct,
+                max_annualized_volatility_pct=max_annualized_volatility_pct,
+                min_sharpe=min_sharpe,
+            ),
         )
     except ValueError as error:
         return _error_page(request, "compare.html", str(error), 422)
@@ -485,16 +383,18 @@ def compare_json(
     min_sharpe: float | None = None,
 ) -> dict[str, object]:
     try:
-        return _comparison_payload(
+        return build_comparison_data(
+            database,
             symbols,
             symbol_type,
-            database,
             days,
             sort_by,
             direction,
-            min_annualized_return_pct=min_annualized_return_pct,
-            max_annualized_volatility_pct=max_annualized_volatility_pct,
-            min_sharpe=min_sharpe,
+            ComparisonFilter(
+                min_annualized_return_pct=min_annualized_return_pct,
+                max_annualized_volatility_pct=max_annualized_volatility_pct,
+                min_sharpe=min_sharpe,
+            ),
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

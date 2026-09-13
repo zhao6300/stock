@@ -1,5 +1,7 @@
 .PHONY: install unit integration test run start clean
 
+export PYTHONPATH ?= src
+
 install:
 	./install.sh
 
