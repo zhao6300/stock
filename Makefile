@@ -1,7 +1,7 @@
 .PHONY: install unit integration test run start clean
 
 install:
-	python -m pip install -r requirements.txt
+	./install.sh
 
 unit:
 	pytest -q tests/test_indicators.py tests/test_models.py tests/test_data.py

@@ -5,7 +5,7 @@
 ## Run
 
 ```bash
-make install
+./install.sh
 make run
 ```
 
