@@ -9,6 +9,18 @@ make install
 make run
 ```
 
+一键启动（自动安装缺失依赖并进入前台）：
+
+```bash
+make start
+```
+
+若要监听所有网卡并使用 80 端口：
+
+```bash
+make start80
+```
+
 默认地址为 `http://127.0.0.1:8000`。
 
 ## Test
